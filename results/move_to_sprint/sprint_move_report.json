@@ -1,0 +1,14 @@
+{
+    "sprint_name": "Sprint 7",
+    "sprint_id": 70,
+    "issues": [
+        "SCRUM-35",
+        "SCRUM-36",
+        "SCRUM-48",
+        "SCRUM-28",
+        "SCRUM-29",
+        "SCRUM-38"
+    ],
+    "success": true,
+    "message": "Issues movidas com sucesso!"
+}

@@ -1,0 +1,36 @@
+{
+    "dry_run": false,
+    "total_issues": 7,
+    "success_count": 7,
+    "fail_count": 0,
+    "details": [
+        {
+            "key": "SCRUM-26",
+            "status": "success"
+        },
+        {
+            "key": "SCRUM-35",
+            "status": "success"
+        },
+        {
+            "key": "SCRUM-36",
+            "status": "success"
+        },
+        {
+            "key": "SCRUM-48",
+            "status": "success"
+        },
+        {
+            "key": "SCRUM-37",
+            "status": "success"
+        },
+        {
+            "key": "SCRUM-38",
+            "status": "success"
+        },
+        {
+            "key": "SCRUM-57",
+            "status": "success"
+        }
+    ]
+}

@@ -1,0 +1,745 @@
+
+--- Page 1 ---
+PRD — Módulo de Formalização
+PRD — Módulo de Formalização
+1. Visão Geral
+1.1 Objetivo do módulo
+O módulo de Formalização organiza a etapa entre a decisão de prosseguir com uma demanda
+e a abertura efetiva do Caso.
+Seu objetivo é permitir que a equipe confirme o conjunto de documentos contratuais, defina
+quem deve assinar cada documento, posicione os campos de assinatura, solicite as assinaturas
+eletrônicas, acompanhe o progresso e confirme a contratação somente quando todos os
+documentos estiverem integralmente assinados.
+A Formalização não produz o conteúdo jurídico dos documentos, não mantém o cadastro das
+pessoas, não envia mensagens diretamente pelos canais e não administra o Caso depois da
+contratação. Ela coordena essas responsabilidades por referências e eventos entre os módulos.
+1.2 Problema que resolve
+Sem um fluxo próprio de formalização, a equipe pode:
+enviar versões ainda editáveis ou não aprovadas;
+esquecer um documento ou signatário obrigatório;
+considerar um documento concluído quando apenas uma das pessoas assinou;
+perder a relação entre documento, signatário, canal e evidência;
+permitir edição depois do envio sem cancelar solicitações anteriores;
+confirmar a contratação antes de abrir o Caso;
+depender do modelo de dados de um único provedor de assinatura.
+A Formalização estabelece uma transição controlada entre produção documental, assinatura
+eletrônica, contratação e abertura do Caso.
+1.3 Valor entregue
+visão única da formalização vinculada ao Intake;
+confirmação explícita do conjunto de documentos;
+atribuição de signatários por documento;
+posicionamento simples dos campos de assinatura;
+--- Page 2 ---
+solicitação de assinatura por e-mail ou WhatsApp;
+acompanhamento do progresso por documento;
+reenvio individual para signatários pendentes;
+cancelamento seguro das solicitações abertas;
+preservação dos documentos originais, assinados e das evidências;
+abertura idempotente do Caso;
+isolamento do provedor de assinatura para permitir migração futura.
+1.4 Contexto do MVP
+No MVP:
+cada Formalização pertence a exatamente um Intake;
+cada Formalização possui exatamente um Cliente;
+todos os documentos incluídos na Formalização são obrigatórios;
+o Cliente é sempre o primeiro signatário;
+o advogado responsável é adicionado por padrão como signatário colaborador;
+nenhum documento é selecionado automaticamente para qualquer signatário;
+signatários adicionais são colaboradores ativos com perfil Advogado, Paralegal ou
+Supervisor;
+CPF é obrigatório para todo signatário;
+pelo menos um contato, e-mail ou telefone com WhatsApp, é obrigatório; não é necessário
+possuir ambos;
+não há campo de papel na assinatura nem comprovação de representação;
+a assinatura eletrônica não usa ICP-Brasil;
+não existe expiração configurável de links no MVP;
+o editor de posicionamento pertence à HMS e a interface do provedor é usada somente para
+a assinatura;
+Documenso é o provedor inicial, encapsulado por uma integração substituível;
+o progresso principal é calculado por documento;
+a Formalização só termina depois da abertura bem-sucedida do Caso.
+2. Escopo e Responsabilidades
+2.1 Responsabilidades da Formalização
+A Formalização é responsável por:
+--- Page 3 ---
+criar e manter a formalização vinculada ao Intake;
+manter seus estados Em andamento, Concluída e Cancelada;
+referenciar o Cliente e os colaboradores vinculados;
+referenciar o conjunto de documentos preparado pela Produção Documental;
+confirmar e cancelar o conjunto de documentos para a etapa de assinatura;
+manter signatários contextuais da Formalização sem criar um cadastro paralelo de pessoas;
+relacionar signatários aos documentos;
+manter a posição e o tipo dos campos de assinatura;
+validar a prontidão para envio;
+criar solicitações de assinatura por meio de uma porta independente de provedor;
+acompanhar o estado de cada solicitação e de cada documento;
+solicitar à Comunicação o envio dos links pelos canais autorizados;
+receber e processar notificações do provedor de forma idempotente;
+preservar referências aos PDFs originais, PDFs assinados e evidências;
+permitir reenvio individual para signatários pendentes;
+cancelar todas as solicitações abertas;
+habilitar a confirmação da contratação quando todas as etapas anteriores estiverem
+concluídas;
+solicitar a abertura do Caso;
+publicar o resultado da formalização para Intake e demais consumidores.
+2.2 Responsabilidades de outros módulos
+Intake
+decide quando iniciar uma Formalização;
+mantém o estado comercial da demanda;
+é dono do comando Encerrar sem contratação;
+mantém o motivo obrigatório e as observações opcionais do encerramento;
+muda para Contratado somente depois da abertura bem-sucedida do Caso.
+Produção Documental
+mantém modelos, documentos, conteúdo em TipTap, versões, geração, revisão e aprovação;
+disponibiliza à Formalização as versões vigentes e aprovadas;
+não realiza assinatura eletrônica;
+não envia links;
+--- Page 4 ---
+não confirma a contratação.
+Identidade
+mantém o cadastro oficial do Cliente e dos colaboradores;
+fornece nome, CPF, e-mail, telefone e perfil;
+mantém consentimentos por canal;
+não mantém signatários contextuais da Formalização.
+Comunicação
+valida o consentimento do canal;
+envia mensagens por e-mail e WhatsApp;
+mantém o registro da mensagem e seu estado de entrega;
+não cria solicitações de assinatura nem decide quais documentos devem ser assinados.
+Caso
+cria o Caso depois da confirmação da contratação;
+mantém sua equipe, permissões, atividades e andamento;
+não participa da escolha de signatários da Formalização.
+2.3 Conceitos de negócio
+Formalização
+Agregado vinculado a um Intake que coordena documentos contratuais, signatários,
+solicitações de assinatura e a transição para o Caso.
+Conjunto de documentos da Formalização
+Agrupamento dos documentos que participarão da contratação. A confirmação desse conjunto
+é uma decisão da Formalização e não cria um estado próprio na Produção Documental.
+Signatário contextual
+Referência a uma pessoa que deve assinar um ou mais documentos daquela Formalização.
+Preserva os dados necessários para rastreabilidade sem substituir o cadastro oficial de
+Identidade.
+Campo de assinatura
+Posição associada a um signatário e a um documento. É configurada no editor simples da HMS
+e convertida para o formato aceito pelo provedor.
+Solicitação de assinatura
+Pedido externo para que um signatário assine um documento. Seu ciclo operacional é
+independente do estado agregado da Formalização.
+--- Page 5 ---
+Documento assinado
+Documento para o qual todos os signatários exigidos concluíram suas assinaturas. Uma
+assinatura isolada não conclui um documento com múltiplos signatários.
+Evidência de assinatura
+Metadados técnicos e documento final fornecidos pelo provedor, preservados para
+rastreabilidade, sem equivaler a certificação ICP-Brasil.
+3. Requisitos
+3.1 Criação da Formalização
+Descrição: Um Intake com prosseguimento autorizado deve iniciar uma única Formalização.
+Regras de negócio
+A Formalização deve possuir referência obrigatória ao Intake e ao Cliente.
+No MVP, uma Formalização possui exatamente um Cliente.
+A criação deve ser idempotente para o mesmo Intake.
+A Formalização começa em Em andamento.
+O Cliente deve ser incluído automaticamente como primeiro signatário.
+O advogado responsável deve ser incluído automaticamente como signatário colaborador.
+Nenhum documento deve ser atribuído automaticamente aos signatários.
+A Formalização deve preservar a referência aos colaboradores vinculados ao contexto.
+Iniciar a Formalização não confirma a contratação.
+Regras de UI/UX
+A página deve exibir Cliente e colaboradores vinculados.
+Os colaboradores devem aparecer abaixo do Cliente.
+A interface deve distinguir a pessoa Cliente dos colaboradores.
+Dados pessoais devem ser exibidos apenas no nível necessário para identificação.
+3.2 Estados da Formalização
+Estados possíveis:
+Em andamento;
+Concluída;
+REQ-001 — Criar uma Formalização a partir de um Intake
+REQ-002 — Controlar a Formalização por três estados agregados
+--- Page 6 ---
+Cancelada.
+Regras de negócio
+Em andamento permite preparar documentos, configurar signatários, solicitar assinaturas e
+tentar abrir o Caso.
+Concluída significa que o Caso foi aberto com sucesso.
+Cancelada significa que o Intake associado foi encerrado sem contratação.
+Concluída e Cancelada são estados terminais.
+Uma Formalização terminal deve permanecer somente leitura.
+Estados operacionais de documentos e solicitações não devem criar novos estados
+agregados.
+Toda transição deve registrar data, origem e autor ou evento responsável.
+Regras de UI/UX
+O estado deve ser apresentado por texto e não depender apenas de cor.
+Páginas em estado terminal devem ocultar ou desabilitar ações de alteração.
+O histórico documental e as evidências permanecem consultáveis em modo leitura.
+3.3 Preparação dos documentos
+Descrição: A Formalização deve consumir documentos preparados pela Produção Documental
+sem assumir sua autoria ou edição.
+Regras de negócio
+A Formalização deve referenciar a versão vigente e aprovada de cada documento.
+Todos os documentos incluídos na Formalização são obrigatórios no MVP.
+Deve existir ao menos um documento para confirmar o conjunto.
+Documento sem versão aprovada impede a confirmação.
+Alterações administrativas em modelos não modificam documentos já vinculados.
+A edição do conteúdo continua pertencendo à Produção Documental.
+Antes do envio, o conteúdo-fonte é o JSON do TipTap mantido pela Produção Documental.
+Regras de UI/UX
+Cada documento deve exibir nome e situação de prontidão.
+Problemas de aprovação devem aparecer no próprio documento.
+A ação de editar deve conduzir ao fluxo mantido pela Produção Documental.
+REQ-003 — Usar somente versões vigentes e aprovadas na Formalização
+--- Page 7 ---
+3.4 Confirmação do conjunto de documentos
+Descrição: Um colaborador vinculado deve confirmar que o conjunto está pronto para
+assinatura.
+Regras de negócio
+A confirmação exige ao menos um documento.
+Todos os documentos devem possuir versão vigente e aprovada.
+A confirmação deve ocorrer em modal.
+Depois da confirmação, a configuração de envio deve ser habilitada.
+A confirmação bloqueia a edição comum do conjunto na jornada da Formalização.
+Confirmar o conjunto não cria solicitações externas e não envia mensagens.
+A confirmação deve ser idempotente.
+Regras de UI/UX
+Antes da confirmação, o card de configuração de envio deve permanecer desabilitado.
+O card deve explicar que o conjunto precisa ser confirmado.
+A ação deve usar o rótulo Confirmar pacote de documentos.
+O modal deve resumir a quantidade de documentos e o efeito da confirmação.
+As ações devem ser Cancelar e Confirmar pacote.
+3.5 Cancelamento do conjunto de documentos
+Descrição: A equipe deve conseguir voltar à edição, desde que não existam solicitações
+abertas.
+Regras de negócio
+Se não houver solicitações abertas, um colaborador vinculado pode cancelar o conjunto
+confirmado.
+Se houver solicitações abertas, todas devem ser canceladas antes.
+O cancelamento deve exigir confirmação em modal.
+Cancelar o conjunto reabilita a edição pela Produção Documental.
+Documentos e evidências anteriores não devem ser apagados.
+Uma edição posterior deve criar nova versão; não pode alterar o conteúdo já enviado.
+Um novo envio deve usar um novo snapshot e novas solicitações.
+REQ-004 — Confirmar explicitamente os documentos antes de configurar o envio
+REQ-005 — Cancelar a confirmação para permitir nova edição
+--- Page 8 ---
+Regras de UI/UX
+A ação deve usar o rótulo Cancelar pacote.
+Quando existirem solicitações abertas, a interface deve orientar primeiro ao cancelamento
+dos envios.
+O modal deve explicar que novas versões exigirão novo envio e novas assinaturas.
+3.6 Dados e seleção de signatários
+Descrição: A Formalização deve usar Cliente e colaboradores existentes, sem duplicar seus
+cadastros.
+Regras de negócio
+O Cliente é sempre o primeiro signatário e não pode ser removido.
+O advogado responsável é adicionado por padrão.
+Signatários adicionais devem ser colaboradores ativos.
+Os perfis elegíveis no MVP são Advogado, Paralegal e Supervisor.
+O seletor deve listar somente colaboradores ativos com um desses perfis.
+Um mesmo colaborador não pode ser adicionado duas vezes.
+CPF é obrigatório.
+Pelo menos um dos contatos deve estar disponível: e-mail ou telefone com WhatsApp.
+Não é obrigatório possuir os dois canais.
+Nome, CPF e contatos devem vir de Identidade.
+Não deve existir seletor de origem do signatário no MVP.
+Não devem existir campos de papel na assinatura ou comprovação de representação.
+O signatário contextual deve preservar a referência da pessoa e um snapshot mínimo dos
+dados usados no envio.
+Regras de UI/UX
+A ação deve usar o rótulo Selecionar colaborador.
+A seleção deve abrir um modal pesquisável.
+O modal deve permitir filtro por perfil.
+Cada resultado deve mostrar nome e perfil.
+A página não deve repetir campos de nome, CPF, e-mail ou telefone para edição.
+Dados ausentes devem orientar a atualização no cadastro oficial.
+REQ-006 — Manter signatários a partir das pessoas já cadastradas
+--- Page 9 ---
+3.7 Remoção de signatário colaborador
+Descrição: Um colaborador vinculado deve conseguir retirar um signatário adicional.
+Regras de negócio
+Somente signatários colaboradores dos perfis Advogado, Paralegal ou Supervisor podem ser
+removidos.
+O Cliente inicial não pode ser removido.
+A remoção deve exigir confirmação.
+A remoção deve desvincular o signatário de todos os documentos selecionados.
+Campos de assinatura posicionados para essa pessoa devem ser removidos.
+Outros signatários e documentos não devem ser alterados.
+Signatário com solicitação aberta só pode ser removido depois do cancelamento aplicável.
+Evidências de solicitações anteriores devem ser preservadas.
+Regras de UI/UX
+A ação deve usar o rótulo Remover signatário e estilo destrutivo.
+O modal deve identificar a pessoa e resumir as consequências.
+As ações devem ser Cancelar e Remover signatário.
+3.8 Atribuição de documentos aos signatários
+Descrição: Cada signatário deve ser relacionado explicitamente aos documentos aplicáveis.
+Regras de negócio
+Nenhum documento é selecionado automaticamente.
+Cada documento deve possuir ao menos um signatário antes do envio.
+Um signatário pode participar de vários documentos.
+Um documento pode possuir vários signatários.
+Remover a relação deve remover também os campos daquela pessoa no documento.
+A prontidão deve ser recalculada depois de qualquer alteração.
+Regras de UI/UX
+A lista deve mostrar a quantidade selecionada.
+O estado inicial deve informar Nenhum documento selecionado.
+A interface deve permitir revisar os signatários dentro de cada documento.
+REQ-007 — Remover um signatário Jurídico antes da conclusão
+REQ-008 — Selecionar quais documentos cada pessoa deve assinar
+--- Page 10 ---
+3.9 Posicionamento dos campos
+Descrição: A equipe deve definir onde cada signatário assina sem depender do construtor de
+formulários do provedor.
+Regras de negócio
+O editor deve operar sobre uma visualização do documento.
+Cada campo deve referenciar documento, página, posição, dimensões, tipo e signatário.
+O MVP deve suportar pelo menos campo de assinatura.
+Cada signatário relacionado ao documento deve possuir os campos obrigatórios antes do
+envio.
+Um campo pode ser movido ou removido antes do envio.
+A remoção deve ocorrer por controle explícito no próprio campo.
+Coordenadas devem ser convertidas pela camada de integração para o formato do provedor.
+O modelo interno não deve depender de estruturas específicas do Documenso.
+Regras de UI/UX
+A página deve manter duas abas: Signatários e Posicionar campos.
+A aba Posicionar campos começa desabilitada enquanto não houver relação válida entre
+signatário e documento.
+O campo posicionado deve identificar visualmente seu signatário.
+Deve existir controle X para remover o campo.
+O editor deve ser simples e dedicado ao posicionamento, não à edição do conteúdo.
+3.10 Configuração do envio
+Descrição: Depois da confirmação do conjunto e do posicionamento dos campos, a equipe
+deve revisar o envio.
+Regras de negócio
+A configuração deve resumir documentos e signatários.
+Para cada signatário deve existir ao menos um canal disponível entre e-mail e WhatsApp.
+A seleção do canal deve respeitar os contatos existentes.
+Não deve existir fallback automático entre canais.
+Não deve existir configuração de expiração de links no MVP.
+O dialog deve validar que todos os documentos possuem signatários e campos obrigatórios.
+REQ-009 — Posicionar campos de assinatura no editor da HMS
+REQ-010 — Revisar e confirmar o envio em um dialog grande
+--- Page 11 ---
+Confirmar o envio deve criar um snapshot imutável do conteúdo-fonte.
+O JSON do TipTap usado no envio não pode mais ser alterado.
+O snapshot deve ser renderizado em PDF antes de ser entregue ao provedor.
+A confirmação deve ser idempotente.
+Regras de UI/UX
+A configuração deve abrir em um dialog grande, não em uma terceira aba.
+O dialog deve apresentar resumo por documento e signatário.
+Os canais devem usar seus respectivos ícones e rótulos E-mail e WhatsApp.
+A interface deve apresentar uma prévia da mensagem por signatário.
+A ação principal deve ser Confirmar e enviar.
+Não deve existir campo de validade ou expiração.
+3.11 Criação e envio das solicitações
+Descrição: A Formalização deve criar solicitações por uma porta de assinatura eletrônica e
+delegar o envio da mensagem à Comunicação.
+Regras de negócio
+O PDF original deve ser armazenado pela HMS antes ou durante a criação da solicitação.
+O provedor deve receber o PDF e a definição convertida dos campos.
+Identificadores externos devem permanecer na camada de integração e não se tornar
+atributos específicos do agregado, como documenso_envelope_id.
+A Formalização deve obter ou referenciar o link seguro de cada signatário.
+A Comunicação deve validar o consentimento antes de enviar.
+O envio deve ocorrer somente pelo canal selecionado.
+Falha na criação do link e falha no envio da mensagem são situações distintas.
+Retentativas não podem gerar solicitações ou mensagens duplicadas.
+O provedor inicial é Documenso, mas o contrato interno deve permitir substituição.
+O MVP não exige assinatura ICP-Brasil.
+Regras de UI/UX
+O card de configuração do envio deve conter a ação Iniciar envio de assinaturas.
+A interface deve diferenciar falha na solicitação de falha na mensagem.
+O usuário deve receber orientação acionável para tentar novamente.
+REQ-011 — Solicitar assinaturas sem acoplar o domínio ao Documenso
+--- Page 12 ---
+3.12 Consentimento e canais
+Descrição: O link pode existir, mas a Comunicação não pode enviá-lo por canal não autorizado.
+Regras de negócio
+Consentimento de WhatsApp não autoriza e-mail.
+Consentimento de e-mail não autoriza WhatsApp.
+A Formalização consulta a disponibilidade do canal, mas Comunicação decide sobre o envio.
+Revogação afeta novas mensagens e reenvios ainda não enviados.
+A ausência de consentimento não deve ser tratada como falha do provedor de assinatura.
+O sistema não deve escolher outro canal automaticamente.
+Regras de UI/UX
+Canal bloqueado deve ser identificado antes da confirmação.
+A mensagem deve orientar a regularização em Identidade quando aplicável.
+O botão de envio deve permanecer indisponível se nenhum canal permitido estiver
+disponível.
+3.13 Acompanhamento por documento
+Descrição: O progresso da Formalização deve refletir quantos documentos estão integralmente
+assinados.
+Regras de negócio
+Um documento é Assinado somente quando todos os seus signatários concluíram.
+Assinaturas individuais devem permanecer visíveis dentro do documento.
+Um documento com parte das assinaturas continua pendente no progresso principal.
+O progresso deve usar a razão documentos assinados por total de documentos.
+Estados repetidos ou fora de ordem do provedor não podem regredir uma conclusão válida.
+Todos os documentos precisam estar assinados para habilitar a contratação.
+Regras de UI/UX
+O progresso principal deve manter o formato N de M documentos assinados.
+Cada documento deve expandir ou apresentar seus signatários.
+Cliente e colaboradores devem exibir nome, contato usado e situação individual.
+O colaborador não deve precisar abrir um histórico separado para entender o estado atual.
+REQ-012 — Bloquear mensagens sem consentimento ativo
+REQ-013 — Calcular o progresso principal por documento
+--- Page 13 ---
+3.14 Reenvio individual
+Descrição: A equipe deve conseguir reenviar uma solicitação pendente para uma pessoa
+específica.
+Regras de negócio
+O reenvio só é permitido para signatário pendente e solicitação ativa.
+O canal deve ser escolhido entre os contatos disponíveis e consentidos.
+O reenvio deve usar a solicitação existente quando o provedor permitir.
+Se for necessário gerar novo link, o vínculo com documento e signatário deve ser preservado.
+O reenvio não deve afetar outros signatários.
+Cada tentativa deve registrar colaborador solicitante, canal, data e hora.
+O registro operacional não exige um botão separado de Histórico na interface.
+Regras de UI/UX
+A ação de reenvio deve ficar junto ao signatário pendente.
+Signatários concluídos não devem apresentar a ação.
+O resultado do reenvio deve ser informado no próprio contexto.
+3.15 Cancelamento de todos os envios
+Descrição: A equipe deve poder interromper a coleta de assinaturas da Formalização.
+Regras de negócio
+O cancelamento deve atingir todas as solicitações ainda abertas.
+A ação deve exigir confirmação em modal.
+Links pendentes devem ser invalidados quando o provedor permitir.
+Documentos já assinados, PDFs e evidências não devem ser apagados.
+Solicitações concluídas não podem ser desfeitas.
+O cancelamento deve registrar autor, data, hora e resultado por solicitação.
+Somente depois do cancelamento efetivo das solicitações abertas o conjunto pode ser
+cancelado para edição.
+Falhas parciais devem ser apresentadas e permitir nova tentativa segura.
+Regras de UI/UX
+A ação deve usar o rótulo Cancelar todos os envios.
+O modal deve explicar o efeito sobre links pendentes e documentos já assinados.
+REQ-014 — Reenviar o link ao signatário correto
+REQ-015 — Cancelar as solicitações abertas antes de editar novamente
+--- Page 14 ---
+A interface deve indicar quais solicitações não puderam ser canceladas.
+3.16 Recebimento e preservação do documento assinado
+Descrição: Depois da conclusão, a HMS deve obter e armazenar o documento assinado.
+Regras de negócio
+O webhook deve ser autenticado e processado de forma idempotente.
+O webhook pode informar a conclusão e fornecer uma referência para download.
+O backend deve baixar o PDF assinado do armazenamento ou endpoint do provedor.
+O PDF assinado deve ser salvo no armazenamento gerenciado pela HMS.
+O PDF original enviado também deve permanecer preservado.
+O armazenamento temporário do provedor não deve ser tratado como repositório oficial da
+HMS.
+A exclusão no provedor depende de capacidade e política da integração, sem afetar a cópia
+oficial.
+Acesso de usuário deve exigir autenticação e autorização.
+Visualização ou download deve usar URL temporária assinada.
+Metadados e evidências devem permitir relacionar arquivo, documento, signatários e
+solicitação.
+Regras de UI/UX
+Documento assinado deve permitir visualizar e baixar quando autorizado.
+A interface não deve expor URLs permanentes de armazenamento.
+Falha ao obter o PDF deve permanecer visível e permitir retentativa sem perder o evento.
+3.17 Confirmação da contratação e abertura do Caso
+Descrição: A contratação deve ser confirmada por ação explícita e culminar na abertura do
+Caso.
+Regras de negócio
+O botão só pode ser habilitado quando todas as etapas anteriores estiverem concluídas.
+Todos os documentos devem estar assinados por todos os signatários exigidos.
+Qualquer colaborador vinculado à Formalização pode confirmar.
+A confirmação deve solicitar a criação do Caso.
+REQ-016 — Preservar o PDF final e as evidências recebidas do provedor
+REQ-017 — Concluir somente depois de abrir o Caso
+--- Page 15 ---
+A operação deve ser idempotente e impedir Casos duplicados.
+A Formalização muda para Concluída somente depois da criação bem-sucedida do Caso.
+Depois do sucesso, Intake muda de Em Formalização para Contratado.
+Se a abertura do Caso falhar, a Formalização permanece Em andamento.
+Se um estado otimista tiver sido aplicado ao Intake, ele deve retornar a Em Formalização.
+A interface deve permitir tentar novamente.
+A escolha da equipe do Caso pertence ao módulo de Caso.
+Regras de UI/UX
+A ação deve usar o rótulo Confirmar contratação.
+O botão deve ser verde e ficar fora do card de configuração de envio.
+Enquanto houver requisito pendente, o botão deve permanecer desabilitado e explicar o
+motivo.
+Falha na abertura deve apresentar Tentar novamente sem solicitar novas assinaturas.
+3.18 Encerramento sem contratação
+Descrição: O encerramento comercial continua pertencendo ao Intake e produz o
+cancelamento da Formalização existente.
+Regras de negócio
+O comando pertence ao Intake, ainda que a ação esteja disponível na página da
+Formalização.
+O motivo do encerramento é obrigatório.
+Observações são opcionais.
+Ao confirmar, Intake muda para Encerrado sem contratação.
+A Formalização muda para Cancelada.
+Solicitações ainda abertas devem ser canceladas.
+Links pendentes devem ser invalidados quando o provedor permitir.
+Assinaturas, documentos, PDFs e evidências já produzidos permanecem preservados.
+O processamento deve ser idempotente.
+Se houver falha externa, o encerramento do Intake e o estado da Formalização devem
+permanecer rastreáveis e a compensação deve ser repetida com segurança.
+Regras de UI/UX
+A ação deve usar o rótulo Encerrar sem contratação.
+REQ-018 — Cancelar a Formalização quando o Intake for encerrado
+--- Page 16 ---
+O dialog deve exigir Motivo do encerramento.
+Deve existir textarea Observações (opcional).
+O modal deve informar que a Formalização ficará somente leitura.
+A ação final deve usar estilo destrutivo.
+3.19 Rastreabilidade
+Descrição: A jornada deve poder ser reconstruída sem depender do painel do provedor.
+Regras de negócio
+Devem ser preservados criação, confirmação e cancelamento do conjunto, alterações de
+signatários, envio, reenvio, entrega, assinatura, cancelamento, recebimento do PDF e
+tentativa de abertura do Caso.
+Registros de ação humana devem manter colaborador, data e hora.
+Envios e reenvios devem registrar canal.
+Eventos externos devem preservar identificador técnico em uma projeção de integração.
+Logs técnicos não devem substituir o histórico de negócio.
+Dados pessoais devem respeitar o menor acesso necessário.
+Regras de UI/UX
+A página deve apresentar o estado atual e detalhes por documento.
+Não deve existir botão dedicado de Histórico no MVP.
+Informações técnicas do provedor não devem poluir a interface comum.
+3.20 Arquitetura substituível de assinatura
+Descrição: A escolha do Documenso não deve contaminar contratos de domínio e interface.
+Regras de negócio
+A Formalização deve depender de capacidades internas: criar solicitação, obter link, cancelar,
+consultar estado, baixar documento e validar webhook.
+Adaptadores traduzem campos e estados do provedor para o vocabulário interno.
+Identificadores específicos ficam na persistência da integração.
+Webhooks devem ser normalizados antes de alcançar o domínio.
+Documentos oficiais permanecem no armazenamento da HMS.
+REQ-019 — Preservar decisões e eventos relevantes
+REQ-020 — Permitir migração futura para outro serviço
+--- Page 17 ---
+Trocar o provedor não deve exigir alterar a identidade de Formalização, documento ou
+signatário.
+Recursos exclusivos de um provedor não entram no contrato comum sem decisão explícita
+de produto.
+4. Regras Gerais
+4.1 Invariantes
+Uma Formalização pertence a um único Intake.
+Uma Formalização possui um único Cliente no MVP.
+O Cliente é o primeiro signatário e não pode ser removido.
+Todos os documentos incluídos são obrigatórios.
+Nenhum documento é assinado até todos os seus signatários concluírem.
+Nenhuma contratação é concluída antes da abertura do Caso.
+Nenhum conteúdo já enviado pode ser alterado.
+Nenhuma mensagem é enviada sem consentimento ativo no canal.
+Nenhuma integração pode criar duplicidades em retentativas.
+4.2 Privacidade e segurança
+CPF, contatos, documentos e evidências devem ser acessíveis somente a colaboradores
+autorizados.
+Links de assinatura devem ser tratados como credenciais sensíveis.
+URLs de download da HMS devem ser temporárias.
+Webhooks devem ser autenticados.
+Logs não devem registrar links completos ou conteúdo documental sem necessidade.
+A arquitetura deve preservar evidências compatíveis com assinatura eletrônica simples ou
+avançada, sem alegar ICP-Brasil.
+4.3 Acessibilidade e responsividade
+Estados e ações não devem depender somente de cor ou ícone.
+Controles devem possuir nome acessível, foco visível e navegação por teclado.
+Modais devem manter foco contido e devolver foco ao elemento de origem.
+Em telas estreitas, documentos, signatários e ações podem ser empilhados sem esconder o
+progresso.
+A confirmação destrutiva deve ser inequívoca.
+--- Page 18 ---
+4.4 Linguagem do produto
+Usar Formalização para o agregado.
+Usar Pacote de documentos apenas como linguagem de interface para o conjunto
+confirmado.
+Usar Signatário para a pessoa relacionada à assinatura.
+Usar Solicitação de assinatura para o pedido externo.
+Usar Documento assinado somente quando todas as assinaturas exigidas existirem.
+Usar Confirmar contratação para a ação que solicita a abertura do Caso.
+5. Fluxos de Usuário
+Fluxo — Preparar a Formalização
+1. Intake inicia a Formalização.
+2. A Formalização aparece Em andamento.
+3. Cliente e advogado responsável são adicionados como signatários.
+4. Nenhum documento está atribuído a eles.
+5. A equipe revisa os documentos fornecidos pela Produção Documental.
+6. A equipe relaciona signatários aos documentos.
+7. A equipe posiciona os campos de assinatura.
+8. A equipe confirma o pacote de documentos.
+9. O card de configuração de envio é habilitado.
+Fluxo — Adicionar colaborador signatário
+1. A equipe seleciona Adicionar signatário.
+2. A página apresenta o seletor Selecionar colaborador.
+3. O modal lista colaboradores ativos com perfil Advogado, Paralegal ou Supervisor.
+4. A equipe pesquisa, filtra e escolhe uma pessoa.
+5. A Formalização obtém nome, CPF e contatos de Identidade.
+6. O novo signatário é incluído sem documentos selecionados.
+7. A equipe escolhe seus documentos e posiciona os campos.
+Fluxo — Confirmar e enviar
+1. A equipe abre Configurar envio.
+2. O dialog resume todos os documentos e signatários.
+3. A equipe revisa e-mail ou WhatsApp por signatário.
+--- Page 19 ---
+4. A plataforma valida documentos, campos, contatos e consentimentos.
+5. A equipe seleciona Confirmar e enviar.
+6. A HMS congela o snapshot do JSON do TipTap.
+7. O backend renderiza e armazena o PDF original.
+8. O adaptador cria as solicitações no Documenso.
+9. Comunicação envia os links pelos canais selecionados.
+10. A página passa a acompanhar o progresso por documento.
+Fluxo — Reenviar para um signatário
+1. A equipe localiza um signatário pendente dentro do documento.
+2. Seleciona Reenviar.
+3. A plataforma valida contato e consentimento.
+4. Comunicação envia o link apenas para essa pessoa.
+5. A tentativa registra solicitante, canal, data e hora.
+6. O estado dos demais signatários não muda.
+Fluxo — Cancelar e editar documentos
+1. A equipe seleciona Cancelar todos os envios.
+2. O modal explica que links pendentes serão invalidados quando possível.
+3. A equipe confirma.
+4. A plataforma cancela todas as solicitações abertas.
+5. PDFs e evidências existentes são preservados.
+6. A equipe seleciona Cancelar pacote.
+7. O modal confirma o retorno à edição.
+8. Produção Documental cria novas versões durante os ajustes.
+9. Um próximo envio gera novo snapshot, PDF e solicitações.
+Fluxo — Documento concluído
+1. O provedor envia um webhook de assinatura.
+2. A integração autentica e normaliza o evento.
+3. A Formalização atualiza o signatário correspondente.
+4. Se ainda houver signatário pendente, o documento continua pendente.
+5. Depois da última assinatura, o documento muda para Assinado.
+6. O backend baixa o PDF final e o preserva na HMS.
+7. O progresso principal é recalculado.
+--- Page 20 ---
+Fluxo — Confirmar contratação
+1. Todos os documentos possuem todas as assinaturas.
+2. O botão Confirmar contratação é habilitado.
+3. Um colaborador vinculado confirma.
+4. A Formalização solicita a abertura idempotente do Caso.
+5. Com sucesso, a Formalização muda para Concluída.
+6. Intake muda para Contratado.
+7. A Formalização fica somente leitura.
+Fluxo — Falha na abertura do Caso
+1. A equipe seleciona Confirmar contratação.
+2. A solicitação de abertura falha.
+3. Nenhum Caso duplicado é criado.
+4. A Formalização permanece Em andamento.
+5. Intake permanece ou retorna a Em Formalização.
+6. A interface apresenta Tentar novamente.
+7. A nova tentativa reutiliza a mesma intenção idempotente.
+Fluxo — Encerrar sem contratação
+1. A equipe seleciona Encerrar sem contratação.
+2. O dialog exige o motivo e permite observações.
+3. A equipe confirma.
+4. Intake muda para Encerrado sem contratação.
+5. Solicitações abertas são canceladas e links são invalidados quando possível.
+6. A Formalização muda para Cancelada.
+7. Documentos, assinaturas e evidências permanecem consultáveis em modo leitura.
+6. Critérios de Aceite do MVP
+6.1 Estrutura e pessoas
+Existe no máximo uma Formalização por Intake.
+A Formalização possui um único Cliente.
+Cliente e advogado responsável são adicionados por padrão sem documentos selecionados.
+O Cliente não pode ser removido.
+Somente Advogado, Paralegal ou Supervisor ativo pode ser adicionado.
+CPF e ao menos um canal, e-mail ou WhatsApp, são exigidos.
+Não existem campos de origem, papel ou comprovação de representação.
+--- Page 21 ---
+6.2 Documentos e campos
+6.3 Envio e acompanhamento
+6.4 Arquivos e integração
+6.5 Conclusão e cancelamento
+7. Indicadores de Produto e Operação
+quantidade de Formalizações iniciadas, concluídas e canceladas;
+tempo entre início e confirmação do pacote;
+Todos os documentos incluídos são obrigatórios.
+Documento sem versão aprovada impede a confirmação do pacote.
+Configuração de envio permanece bloqueada antes da confirmação.
+Nenhum documento é selecionado automaticamente para um signatário.
+Cada campo mantém vínculo com documento, página e signatário.
+A interface permite remover um campo posicionado.
+Depois do envio, o snapshot do conteúdo é imutável.
+Configuração de envio ocorre em dialog grande.
+Não existe expiração de links.
+Comunicação valida consentimento por canal.
+Não existe fallback automático de canal.
+Falha de criação de link é distinta de falha de mensagem.
+Progresso principal é calculado por documento.
+Documento com múltiplos signatários só conclui depois de todos.
+Reenvio fica disponível somente para signatário pendente.
+Não existe botão dedicado de Histórico.
+Todos os envios podem ser cancelados por ação confirmada.
+PDF original é gerado a partir do snapshot do TipTap.
+PDF original e PDF assinado são preservados pela HMS.
+Webhooks e downloads são idempotentes.
+Acesso ao arquivo usa autorização e URL temporária.
+O domínio não possui atributo específico documenso_envelope_id.
+Documenso pode ser substituído por outro adaptador sem mudar o agregado.
+O MVP funciona sem ICP-Brasil.
+Confirmar contratação só habilita quando todos os documentos estão assinados.
+Qualquer colaborador vinculado pode confirmar.
+A Formalização só conclui depois da abertura do Caso.
+Falha ao abrir o Caso mantém Formalização Em andamento e permite tentar novamente.
+A criação idempotente impede Caso duplicado.
+Encerramento sem contratação exige motivo e aceita observações opcionais.
+Intake encerrado cancela a Formalização.
+Formalização Concluída ou Cancelada fica somente leitura.
+--- Page 22 ---
+tempo entre confirmação do pacote e primeiro envio;
+tempo até primeira assinatura e até conclusão de todos os documentos;
+percentual de documentos concluídos sem reenvio;
+quantidade de reenvios por canal;
+falhas de criação de solicitação, envio de mensagem, webhook e download;
+cancelamentos de envio e de pacote;
+motivos de encerramento sem contratação;
+taxa de conversão de Formalização para Caso;
+falhas e retentativas de abertura do Caso;
+duplicidades evitadas por idempotência;
+distribuição de uso por canal e provedor.
+Os indicadores podem ser produzidos por modelos de leitura inscritos nos eventos do módulo e
+não alteram suas regras operacionais.
+8. Relação com Outras Áreas do Produto
+Intake
+Inicia a Formalização, mantém o estado comercial e é dono do encerramento sem contratação.
+Só muda para Contratado depois que a Formalização confirma a abertura do Caso.
+Produção Documental
+Mantém o conteúdo, as versões e a aprovação dos documentos. A Formalização mantém a
+decisão de que seu conjunto está pronto para assinatura e o snapshot enviado.
+Identidade
+Fornece Cliente, colaboradores, CPF, contatos, perfis e consentimentos. A Formalização
+mantém apenas referências e snapshots mínimos necessários à evidência.
+Comunicação
+Envia links por e-mail e WhatsApp, aplica consentimentos e preserva o estado de entrega. A
+Formalização decide quem deve assinar qual documento.
+Caso
+É criado ao final da contratação. A seleção e a manutenção da equipe do Caso pertencem ao
+próprio módulo de Caso.
+--- Page 23 ---
+Analytics
+Pode acompanhar conversão, duração, falhas e reenvios por eventos, sem participar das
+decisões do fluxo.
+9. Fora do Escopo
+múltiplos Clientes na mesma Formalização;
+signatário externo que não seja o Cliente ou um colaborador elegível;
+cadastro ou edição de pessoa dentro da Formalização;
+campo de papel na assinatura;
+comprovação de representação;
+seleção de origem do signatário;
+expiração configurável de links;
+fallback automático de canal;
+assinatura ICP-Brasil;
+certificado digital A1 ou A3;
+edição do conteúdo no editor de posicionamento;
+construtor de formulários do provedor;
+escolha da equipe do Caso;
+pagamento como condição da contratação;
+múltiplos provedores ativos na mesma Formalização;
+exclusão definitiva de documentos, PDFs ou evidências;
+edição de Formalização Concluída ou Cancelada.
+10. Decisões Futuras
+avaliar signatários externos e representantes em uma versão posterior;
+avaliar assinatura qualificada ou ICP-Brasil quando houver requisito jurídico ou comercial;
+definir política de retenção e eventual exclusão dos arquivos no provedor;
+avaliar novos tipos de campo além de assinatura;
+avaliar expiração de links caso risco, suporte ou conformidade justifiquem;
+avaliar mais de um Cliente ou contratante na mesma Formalização;
+definir provedores alternativos e critérios operacionais de migração.
